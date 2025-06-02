@@ -4,6 +4,7 @@ import os
 from ast import literal_eval
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
+import src.util as util
 
 # Third-party packages
 import openai
@@ -30,6 +31,8 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain_experimental.text_splitter import SemanticChunker
+
+from src.cls_Env import cls_Env
 
 # Configure logging
 logging.basicConfig(
@@ -98,6 +101,7 @@ def load_pdfs(folder_path: str) -> List[Document]:
 
     return documents
 
+
 def process_documents(    
     openai_api_key: str,
     document_store_name: str,
@@ -120,9 +124,9 @@ def process_documents(
     Returns:
         VectorStoreRetriever: A retriever instance built from the FAISS vector store.
     """
+
     documents = load_pdfs(document_store_name)
 
-    
     # Convert text chunks into embeddings and store them in FAISS
     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
 
@@ -441,6 +445,7 @@ def run_interactive_mode(
         response = qa_chain.invoke({"query": prompt})
         logger.info(f"\nResponse: {response['result']}")
 
+from src.cls_Env import cls_Env
 
 def main() -> None:
     """
@@ -453,22 +458,23 @@ def main() -> None:
     - Executes the appropriate pipeline based on user selection
     """
     logger.info("Loading environment variables...")
-    env_vars = _load_env_variables()
-    retriever = process_documents(openai_api_key=env_vars["openai_api_key"],
-                                  document_store_name=env_vars["document_store_name"], 
-                                  faiss_index_name=env_vars["faiss_index_name"])
+    cls_env = cls_Env()
+    config = util.load_config(cls_env.yaml_config_path)
+
+    retriever = process_documents(cls_env.open_api_key,
+                                  document_store_name=config["document_store_name"], 
+                                  faiss_index_name=config["faiss_index_name"])
+  
     mode = input("Enter 'batch' to run from CSV or 'interactive' to type questions: ").strip().lower()
     
     if mode == "batch":
-        results = run_rag_pipeline(absolute_path=env_vars["question_store_name"], 
+        results = run_rag_pipeline(absolute_path=config["question_store_name"], 
                                    retriever=retriever,
-                                   model_name=env_vars["model_name"],
-                                   temperature=float(env_vars["temperature"]),
-                                   results_store_name=env_vars["results_store_name"])
+                                   model_name=cls_env.openai_model_name,
+                                   temperature=float(cls_env.llm_temperature),
+                                   results_store_name=config["results_store_name"])
     elif mode == "interactive":
-        run_interactive_mode(retriever=retriever,
-                             model_name=env_vars["model_name"],
-                             temperature=float(env_vars["temperature"]))
+        run_interactive_mode(retriever=retriever, model_name=cls_env.openai_model_name, temperature=float(cls_env.llm_temperature))
     else:
         logger.info("Invalid input. Exiting.")    
 
