@@ -1,5 +1,6 @@
 faiss_index/*
 results/*
+!results/result_20250324_1155.csv
 .venv/
 .env
 .python-version
