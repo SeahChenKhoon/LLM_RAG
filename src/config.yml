@@ -1,0 +1,5 @@
+faiss_index_name: "faiss_index"
+document_store_name: "./documents"
+file_type: "*.pdf"
+question_store_name: "./questions/Questions.csv"
+results_store_name: "./results/result.csv"
